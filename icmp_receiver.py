@@ -68,7 +68,6 @@ def Decrypt_Process(data):
 	message_header = message_header.decode('utf-8')
 	message_header = int(message_header.strip())
 	message = unpad(context.cipher.decrypt(data[256:]), CHUNK_SIZE)
-	#message = str(message)
 	context.last_message = message
 	messages.append(message)
 
@@ -102,8 +101,6 @@ while context.mode == "none":
 		sniff(filter=f"icmp", count=1, prn=Receive_Message)
 
 
-#t = sniff(filter=f"icmp and host {SENDER_ADDR}", prn=Receive_Message, count=int(context.message_total))
 sniff(lfilter=lambda x:x.haslayer(IP) and x[IP].src == SENDER_ADDR and x.haslayer(ICMP), stop_filter=lambda x:x[ICMP].id is 0x3, prn=Receive_Message)
 
 context.file.close()
-

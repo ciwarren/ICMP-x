@@ -88,9 +88,7 @@ def Send_File(file):
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
 
-	t2 = IP(dst=DESTINATION_ADDR)/ICMP(id=3)
-	print(ls(t2))
-	send(t2)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
 
 if mode == "file":
 	try:
