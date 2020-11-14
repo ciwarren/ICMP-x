@@ -5,7 +5,6 @@ from Crypto.Util.Padding import pad, unpad
 
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
-SENDER_ADDR = "192.168.1.134"
 
 def interpretConfig(file):
 	file = open(file, "r")
@@ -35,6 +34,7 @@ class Context:
 		self.current_packet = "none"
 		self.message_total = "none"
 		self.message_counter = 0
+		self.sender_addr = "none"
 
 	def Set_Mode(self, value):
 
@@ -80,9 +80,10 @@ def Decrypt_Process(data):
 
 def Receive_Message(packet):
 	context.current_packet = packet
-
-	if context.mode == "none": 
-		#context.sender_addr = print(packet[IP].src) dynamic sender registration WIP
+	print(len(packet[Raw].load))
+	if context.mode == "none":
+		context.sender_addr = packet[IP].src
+		print(f'New transmission from {context.sender_addr}')
 		context.Set_Mode(packet.sprintf("%ICMP.id%"))
 
 	elif packet.sprintf("%ICMP.id%") != "0x3":
@@ -98,9 +99,9 @@ def Store_File(message):
 messages = []
 
 while context.mode == "none":
-		sniff(filter=f"icmp", count=1, prn=Receive_Message)
+		sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].id == 0x1 or  x[ICMP].id == 0x2, count=1, prn=Receive_Message)
 
 
-sniff(lfilter=lambda x:x.haslayer(IP) and x[IP].src == SENDER_ADDR and x.haslayer(ICMP), stop_filter=lambda x:x[ICMP].id is 0x3, prn=Receive_Message)
+sniff(filter=f"host {context.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn=Receive_Message)
 
 context.file.close()
