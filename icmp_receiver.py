@@ -36,7 +36,7 @@ class Context:
 		self.message_counter = 0
 		self.sender_addr = "none"
 
-	def Set_Mode(self, value):
+	def Set_Mode(self, value, address):
 
 		data = self.current_packet[Raw].load
 
@@ -49,9 +49,11 @@ class Context:
 			self.message_total = file_vars[1]
 			self.file = open(self.filename,"wb")
 			self.mode = "file"
+			self.sender_addr = address
 
 		if str(value) == "0x2":
 			self.mode = "stream"
+			self.sender_addr = address
 
 	def Message_Increment(self):
 		self.message_counter += 1
@@ -80,9 +82,8 @@ def Decrypt_Process(data):
 def Receive_Message(packet):
 	context.current_packet = packet
 	if context.mode == "none":
-		context.sender_addr = packet[IP].src
-		print(f'New transmission from {context.sender_addr}')
-		context.Set_Mode(packet.sprintf("%ICMP.id%"))
+		print(f'New transmission from {packet[IP].src}')
+		context.Set_Mode(packet.sprintf("%ICMP.id%"), packet[IP].src)
 
 	elif packet.sprintf("%ICMP.id%") != "0x3":
 		context.Message_Increment()
