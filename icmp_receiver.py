@@ -49,7 +49,6 @@ class Context:
 			self.message_total = file_vars[1]
 			self.file = open(self.filename,"wb")
 			self.mode = "file"
-			self.sender_addr = ""
 
 		if str(value) == "0x2":
 			self.mode = "stream"
@@ -80,7 +79,6 @@ def Decrypt_Process(data):
 
 def Receive_Message(packet):
 	context.current_packet = packet
-	print(len(packet[Raw].load))
 	if context.mode == "none":
 		context.sender_addr = packet[IP].src
 		print(f'New transmission from {context.sender_addr}')
@@ -100,7 +98,6 @@ messages = []
 
 while context.mode == "none":
 		sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].id == 0x1 or  x[ICMP].id == 0x2, count=1, prn=Receive_Message)
-
 
 sniff(filter=f"host {context.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn=Receive_Message)
 
