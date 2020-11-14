@@ -39,7 +39,6 @@ class Context:
 		self.file_length = "none"
 
 	def Encrypt_Message(self, data):
-		print(len(data))
 		data = pad(data,CHUNK_SIZE)
 		payload = self.cipher.encrypt(data)
 		return payload
@@ -69,20 +68,29 @@ def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	message_header = context.Encrypt_Message(f"{len(message):<{HEADERLENGTH}}".encode('utf-8'))
 	payload = message_header + message
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id)/payload)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id)/payload, verbose=False)
+	print(context.id)
+
 
 
 def Send_File(file):
 	x_previous = 0 
 	print(len(file))
-	for x in range(32,len(file)+(len(file)%32),32):
+	for x in range(32,len(file),32):
 		file_segment = file[x_previous:x]
-		print(file_segment)
+		print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
-		time.sleep(.01)
+		time.sleep(.07)
 		x_previous = x
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
+	file_segment = file[x_previous:]
+	print(f'{str(x)} of {str(len(file))} is: {file_segment}')
+	Send_Message_Encrypted(file_segment)
+	time.sleep(.01)
+
+	t2 = IP(dst=DESTINATION_ADDR)/ICMP(id=3)
+	print(ls(t2))
+	send(t2)
 
 if mode == "file":
 	try:

@@ -73,7 +73,6 @@ def Decrypt_Process(data):
 	messages.append(message)
 
 	if context.mode == "file":
-
 		Store_File(bytes(message))
 
 	if context.mode == "stream":
@@ -104,7 +103,7 @@ while context.mode == "none":
 
 
 #t = sniff(filter=f"icmp and host {SENDER_ADDR}", prn=Receive_Message, count=int(context.message_total))
-sniff(filter=f"icmp and host {SENDER_ADDR}", stop_filter=lambda x:x[ICMP].id is 0x3, prn=Receive_Message)
+sniff(lfilter=lambda x:x.haslayer(IP) and x[IP].src == SENDER_ADDR and x.haslayer(ICMP), stop_filter=lambda x:x[ICMP].id is 0x3, prn=Receive_Message)
 
 context.file.close()
 
