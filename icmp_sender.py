@@ -47,6 +47,7 @@ context = Context(session_key)
 
 def Send_Message_Encrypted(message):
 	#message = str(message)
+	message 
 	message = context.Encrypt_Message(message)
 	message_header = context.Encrypt_Message(f"{len(message):<{HEADERLENGTH}}".encode('utf-8'))
 	payload = message_header + message
@@ -62,6 +63,8 @@ def Send_File(file):
 		Send_Message_Encrypted(file_segment)
 		time.sleep(.01)
 		x_previous = x
+
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
 
 mode = sys.argv[1]
 
@@ -80,6 +83,4 @@ if mode == "file":
 
 if mode == "stream":
 	context.Set_Mode("stream")
-	print("Feature in dev...")
-
-
+	print

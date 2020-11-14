@@ -87,7 +87,9 @@ def Receive_Message(packet):
 		#context.sender_addr = print(packet[IP].src) dynamic sender registration WIP
 		context.Set_Mode(packet.sprintf("%ICMP.id%"))
 
-	
+	elif packet.sprintf("%ICMP.id%") == "0x3":
+		t.stop()
+
 	else:
 		context.Message_Increment()
 
