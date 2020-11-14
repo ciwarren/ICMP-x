@@ -5,7 +5,7 @@ from Crypto.Util.Padding import pad, unpad
 
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
-SENDER_ADDR = "192.168.86.44"
+SENDER_ADDR = "192.168.1.134"
 
 def interpretConfig(file):
 	file = open(file, "r")
@@ -87,10 +87,7 @@ def Receive_Message(packet):
 		#context.sender_addr = print(packet[IP].src) dynamic sender registration WIP
 		context.Set_Mode(packet.sprintf("%ICMP.id%"))
 
-	elif packet.sprintf("%ICMP.id%") == "0x3":
-		t.stop()
-
-	else:
+	elif packet.sprintf("%ICMP.id%") != "0x3":
 		context.Message_Increment()
 
 		data = packet[Raw].load
@@ -106,7 +103,8 @@ while context.mode == "none":
 		sniff(filter=f"icmp", count=1, prn=Receive_Message)
 
 
-t = sniff(filter=f"icmp and host {SENDER_ADDR}", prn=Receive_Message, count=int(context.message_total))
+#t = sniff(filter=f"icmp and host {SENDER_ADDR}", prn=Receive_Message, count=int(context.message_total))
+sniff(filter=f"icmp and host {SENDER_ADDR}", stop_filter=lambda x:x[ICMP].id is 0x3, prn=Receive_Message)
 
 context.file.close()
 
