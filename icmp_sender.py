@@ -3,12 +3,30 @@
 from scapy.all import * 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-import sys
+import argparse
 import time
 
 HEADERLENGTH = 10
 CHUNK_SIZE = 256
 DESTINATION_ADDR = "192.168.86.42"
+
+ 
+# Initialize parser
+parser = argparse.ArgumentParser()
+ 
+# Adding optional argument
+parser.add_argument("-p", "--Peer", help = "IP address of sending host -ex 192.168.1.1")
+parser.add_argument("-m", "--Mode", help = "Operation mode, 'file' or 'stream'. Defaults to file.") 
+parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
+# Read arguments from command line
+args = parser.parse_args()
+ 
+if args.Peer:
+    DESTINATION_ADDR = args.Peer
+if args.Mode:
+	mode = args.Mode
+if args.Filename:
+	filename = args.Filename
 
 #Referred to as context
 class Context:
@@ -31,7 +49,7 @@ class Context:
 
 		if self.mode == "file":
 			self.id = 1
-			Send_Message_Encrypted(f'{sys.argv[2]}:{(self.file_length // 32)}'.encode('utf-8'))
+			Send_Message_Encrypted(f'{filename}:{(self.file_length // 32)}'.encode('utf-8'))
 			self.id = 0
 
 
@@ -66,13 +84,9 @@ def Send_File(file):
 
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
 
-mode = sys.argv[1]
-
-print(mode)
-
 if mode == "file":
 	try:
-		file = open(sys.argv[2], 'rb')
+		file = open(filename, 'rb')
 
 	except:
 		print("file not found")
