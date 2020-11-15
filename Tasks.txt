@@ -1,8 +1,16 @@
 To-Do:
 
--Multiple Sessions per Client
--Error Detection
--Error Correction
--Unique Session Keys
--Combining Messages into 512B Payload
--Stream Mode
+--Multiple Sessions per Client
+--Error Detection
+--Error Correction
+--Unique Session Keys
+--Combining Messages into 512B Payload
+--Stream Mode
+--Async Sniffer Timeout
+--Session Key Negotiation
+--Verbosity and Logging
+--Aggression/Changing timeout values
+--Session Resuming
+--Server File Overwrite Protection
+--Client Whitelisting and Blacklisting on Server
+
