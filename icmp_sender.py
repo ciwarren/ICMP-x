@@ -9,7 +9,7 @@ import time
 
 HEADERLENGTH = 10
 CHUNK_SIZE = 256
-DATA_SIZE = CHUNK_SIZE - HEADERLENGTH
+DATA_SIZE = CHUNK_SIZE - 1
 
  
 # Initialize parser
@@ -64,12 +64,8 @@ session_key = "99dbb171849cb81330244b664297225d"
 context = Context(session_key)
 
 def Send_Message_Encrypted(message):
-	#message = str(message)
-	message 
 	message = context.Encrypt_Message(message)
-	message_header = context.Encrypt_Message(f"{len(message):<{HEADERLENGTH}}".encode('utf-8'))
-	payload = message_header + message
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id)/payload, verbose=False)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id)/message, verbose=False)
 	print(context.id)
 
 
@@ -89,7 +85,7 @@ def Send_File(file):
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3)/getrandbits(4096).to_bytes(512,byteorder='big'))
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
 
 if mode == "file":
 	try:
