@@ -9,7 +9,7 @@ import time
 
 HEADERLENGTH = 10
 CHUNK_SIZE = 256
-DESTINATION_ADDR = "192.168.86.42"
+DATA_SIZE = CHUNK_SIZE - HEADERLENGTH
 
  
 # Initialize parser
@@ -49,7 +49,7 @@ class Context:
 
 		if self.mode == "file":
 			self.id = 1
-			Send_Message_Encrypted(f'{filename}:{(self.file_length // 32)}'.encode('utf-8'))
+			Send_Message_Encrypted(f'{filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
 			self.id = 0
 
 
@@ -77,7 +77,7 @@ def Send_Message_Encrypted(message):
 def Send_File(file):
 	x_previous = 0 
 	print(len(file))
-	for x in range(32,len(file),32):
+	for x in range(DATA_SIZE,len(file),DATA_SIZE):
 		file_segment = file[x_previous:x]
 		print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)

@@ -93,7 +93,7 @@ def Receive_Message(packet):
 
 def Store_File(message):
 	context.file.write(bytes(message))
-
+	context.file.flush()
 
 messages = []
 
