@@ -77,7 +77,7 @@ class Session:
 		self.file.flush()
 
 	def Start_Session(self):
-		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn= lambda x:Receive_Message(x,self))
+		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8, stop_filter=lambda x:x[ICMP].id == 0x3, prn= lambda x:Receive_Message(x,self))
 		print(f"Starting session sniff of sender {self.sender_addr}")
 		self.capture.start()
 
@@ -103,17 +103,8 @@ def Create_Session(packet, session_key):
 	session.Start_Session()
 
 def Decrypt_Process(data, session):
-	message_header = unpad(session.cipher.decrypt(data[0:256]), CHUNK_SIZE)
-	message_header = message_header.decode('utf-8')
-	message_header = int(message_header.strip())
-	message = unpad(session.cipher.decrypt(data[256:]), CHUNK_SIZE)
+	data = session.cipher.decrypt(data)
+	message = unpad(data, CHUNK_SIZE)
 	return message
-#	messages.append(message)
-
-	if session.mode == "file":
-		Store_File(bytes(message))
-
-	if session.mode == "stream":
-		print(messages)
 
 sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 ), prn= lambda x:Create_Session(x,session_key))
