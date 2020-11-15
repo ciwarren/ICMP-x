@@ -3,11 +3,11 @@ To-Do:
 --Multiple Sessions per Client
 --Error Detection
 --Error Correction
---Unique Session Keys
+C-Unique Session Keys
 --Combining Messages into 512B Payload
 --Stream Mode
 --Async Sniffer Timeout
---Session Key Negotiation
+C-Session Key Negotiation
 --Verbosity and Logging
 --Aggression/Changing timeout values
 --Session Resuming
