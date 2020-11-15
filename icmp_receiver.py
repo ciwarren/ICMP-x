@@ -98,8 +98,8 @@ def Store_File(message):
 messages = []
 
 while context.mode == "none":
-		sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].id == 0x1 or  x[ICMP].id == 0x2, count=1, prn=Receive_Message)
+		sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 ), count=1, prn=Receive_Message)
 
-sniff(filter=f"ip src {context.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn=Receive_Message)
+sniff(filter=f"ip src {context.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn=Receive_Message)
 
 context.file.close()
