@@ -65,7 +65,6 @@ context = Context(session_key)
 
 def Send_Message_Encrypted(message):
 	#message = str(message)
-	message 
 	message = context.Encrypt_Message(message)
 	message_header = context.Encrypt_Message(f"{len(message):<{HEADERLENGTH}}".encode('utf-8'))
 	payload = message_header + message
