@@ -16,7 +16,7 @@ DESTINATION_ADDR = "192.168.86.42"
 parser = argparse.ArgumentParser()
  
 # Adding optional argument
-parser.add_argument("-p", "--Peer", help = "IP address of sending host -ex 192.168.1.1")
+parser.add_argument("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
 parser.add_argument("-m", "--Mode", help = "Operation mode, 'file' or 'stream'. Defaults to file.") 
 parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
 # Read arguments from command line
