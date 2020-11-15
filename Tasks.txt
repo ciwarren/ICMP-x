@@ -1,0 +1,8 @@
+To-Do:
+
+-Multiple Sessions per Client
+-Error Detection
+-Error Correction
+-Unique Session Keys
+-Combining Messages into 512B Payload
+-Stream Mode
