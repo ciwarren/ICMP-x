@@ -14,11 +14,17 @@ parser = argparse.ArgumentParser()
  
 # Adding optional argument
 parser.add_argument("-p", "--Preferred_Path", help = "Path to save output files to.")
+parser.add_argument("-i", "--Interface", help = "Interface to receieve on.")
 # Read arguments from command line
 args = parser.parse_args()
  
+INTERFACE = None
+
 if args.Preferred_Path:
     PREFERRED_PATH = args.Preferred_Path
+
+if args.Interface:
+	INTERFACE = args.Interface
 
 
 def interpretConfig(file):
@@ -77,7 +83,7 @@ class Session:
 		self.file.flush()
 
 	def Start_Session(self):
-		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn= lambda x:Receive_Message(x,self))
+		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x.haslayer(Raw) and len(x[Raw].load) >= 128, stop_filter=lambda x:x[ICMP].id == 0x3, prn= lambda x:Receive_Message(x,self), iface = INTERFACE)
 		print(f"Starting session sniff of sender {self.sender_addr}")
 		self.capture.start()
 
@@ -116,4 +122,4 @@ def Decrypt_Process(data, session):
 	if session.mode == "stream":
 		print(messages)
 
-sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 ), prn= lambda x:Create_Session(x,session_key))
+sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 ), prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
