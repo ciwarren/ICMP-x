@@ -66,8 +66,9 @@ context = Context(session_key)
 
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id)/message, verbose=False)
-	print(context.id)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id,seq=context.sequence_number)/message, verbose=False)
+	print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
+	context.sequence_number += 0x1
 
 
 
@@ -86,7 +87,7 @@ def Send_File(file):
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3))
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3,seq=context.sequence_number))
 
 if mode == "file":
 	try:
