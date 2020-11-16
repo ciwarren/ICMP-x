@@ -5,7 +5,7 @@ To-Do:
 --Error Correction
 C-Unique Session Keys
 --Combining Messages into 512B Payload
---Stream Mode
+B-Stream Mode
 --Async Sniffer Timeout
 C-Session Key Negotiation
 --Verbosity and Logging
