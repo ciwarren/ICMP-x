@@ -38,6 +38,7 @@ class Context:
 		self.mode = "none"
 		self.id = "none"
 		self.file_length = "none"
+		self.sequence_number = 0x0
 
 	def Encrypt_Message(self, data):
 		data = pad(data,CHUNK_SIZE)

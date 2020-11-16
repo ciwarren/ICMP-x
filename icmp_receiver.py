@@ -68,6 +68,7 @@ class Session:
 		self.message_total = "none"
 		self.message_counter = 0
 		self.capture = "none"
+		self.sequence_number = 0x0
 
 	def Set_Mode(self, value):
 
@@ -87,8 +88,8 @@ class Session:
 			self.mode = "stream"
 
 	def Message_Increment(self):
-		self.message_counter += 1
-		print (self.message_counter)
+		self.sequence_number += 0x1
+		print (self.sequence_number)
 
 	def Store_File(self, message):
 		self.file.write(bytes(message))
@@ -102,7 +103,10 @@ class Session:
 def Receive_Message(packet, session):
 	session.current_packet = packet
 	if packet.sprintf("%ICMP.id%") != "0x3":
-		session.Message_Increment()
+		if packet[ICMP].seq == session.sequence_number + 0x1:
+			session.Sequence_Increment()
+		else:
+			print(f"Received sequence {packet[ICMP].seq} from {session.sender_addr} but expected sequence {session.sequence_number + 0x1}")
 		message = Decrypt_Process(packet[Raw].load, session)
 		if session.mode == "file":
 			session.Store_File(bytes(message))
