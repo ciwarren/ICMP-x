@@ -166,6 +166,8 @@ def diffieHellman():
 	B = int(data)
 	s = (B**a) % p
 	
+	print(s)
+
 	secret = hashlib.sha256(str(s).encode()).hexdigest()
 	x = slice(32)
 	secret = secret[x]
