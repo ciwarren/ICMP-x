@@ -99,7 +99,7 @@ class Session:
 
 	def Start_Session(self):
 		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8, stop_filter=lambda x:x[ICMP].id == 0x3, prn= Receive_Message(self), iface = INTERFACE)
-		print(f"Starting session sniff of sender {self.sender_addr}")
+		print(f"Starting session sniff for sender {self.sender_addr}")
 		self.capture.start()
 
 def Receive_Message(session):
@@ -114,7 +114,7 @@ def Receive_Message(session):
 			if session.mode == "stream":
 				print(messages)
 		else:
-			print(f"Stopping session with addr {session.sender_addr}")
+			print(f"Clossing session with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()
 	return Process_Message

@@ -77,17 +77,17 @@ def Send_File(file):
 	print(len(file))
 	for x in range(DATA_SIZE,len(file),DATA_SIZE):
 		file_segment = file[x_previous:x]
-		print(f'{str(x)} of {str(len(file))} is: {file_segment}')
+		#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
-		time.sleep(.01)
+		time.sleep(.001)
 		x_previous = x
 
 	file_segment = file[x_previous:]
-	print(f'{str(x)} of {str(len(file))} is: {file_segment}')
+	#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
-
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3,seq=context.sequence_number))
+	print(f"Closing session with destination {DESTINATION_ADDR}.")
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3,seq=context.sequence_number), verbose=False)
 
 if mode == "file":
 	try:
