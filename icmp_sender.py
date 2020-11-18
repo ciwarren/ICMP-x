@@ -68,14 +68,7 @@ class Context:
 		time.sleep(3)
 
 
-if Key_Type == "dynamic":
-	session_key = diffieHellman()
 
-else:
-	session_key = "99dbb171849cb81330244b664297225d"
-
-
-context = Context(session_key)
 
 def isPrime(n):
 	if n == 2 or n == 3: return True
@@ -203,7 +196,14 @@ def Send_File(file):
 
 
 
+if Key_Type == "dynamic":
+	session_key = diffieHellman()
 
+else:
+	session_key = "99dbb171849cb81330244b664297225d"
+
+
+context = Context(session_key)
 
 
 if mode == "file":
