@@ -6,6 +6,9 @@ from Crypto.Util.Padding import pad, unpad
 from random import getrandbits
 import argparse
 import time
+import random
+import hashlib
+
 
 HEADERLENGTH = 10
 CHUNK_SIZE = 256
@@ -19,6 +22,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
 parser.add_argument("-m", "--Mode", help = "Operation mode, 'file' or 'stream'. Defaults to file.") 
 parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
+parser.add_argument("-k", "--Key_Type", help = "dynamic or static")
 # Read arguments from command line
 args = parser.parse_args()
  
@@ -28,6 +32,8 @@ if args.Mode:
 	mode = args.Mode
 if args.Filename:
 	filename = args.Filename
+if args.Key_Type:
+	Key_Type = args.Key_Type
 
 #Referred to as context
 class Context:
@@ -61,8 +67,114 @@ class Context:
 
 		time.sleep(3)
 
-session_key = "99dbb171849cb81330244b664297225d"
+
+if Key_Type == "dynamic":
+	session_key = diffeHellman()
+
+else:
+	session_key = "99dbb171849cb81330244b664297225d"
+
+
 context = Context(session_key)
+
+def isPrime(n):
+	if n == 2 or n == 3: return True
+	if n < 2 or n%2 == 0: return False
+	if n < 9: return True
+	if n%3 == 0: return False
+	r = int(n**0.5)
+	f = 5
+	while f <= r:
+		if n%f == 0: return False
+		if n%(f+2) == 0: return False
+		f +=6
+	return True
+
+def genPrime(min, max):
+	primes = [i for i in range(min,max) if isPrime(i)]
+	p = random.choice(primes)
+	return p
+
+def findPrimefactors(s, n) : 
+  
+    # Print the number of 2s that divide n  
+    while (n % 2 == 0) : 
+        s.add(2)  
+        n = n // 2
+  
+    # n must be odd at this po. So we can   
+    # skip one element (Note i = i +2)  
+    for i in range(3, int(sqrt(n)), 2): 
+          
+        # While i divides n, print i and divide n  
+        while (n % i == 0) : 
+  
+            s.add(i)  
+            n = n // i  
+          
+    # This condition is to handle the case  
+    # when n is a prime number greater than 2  
+    if (n > 2) : 
+        s.add(n) 
+
+def findPrimitive( n) : 
+    s = set()  
+
+    # Check if n is prime or not  
+    if (isPrime(n) == False):  
+        return -1
+  
+    # Find value of Euler Totient function  
+    # of n. Since n is a prime number, the  
+    # value of Euler Totient function is n-1  
+    # as there are n-1 relatively prime numbers. 
+    phi = n - 1
+  
+    # Find prime factors of phi and store in a set  
+    findPrimefactors(s, phi)  
+  
+    # Check for every number from 2 to phi  
+    for r in range(2, phi + 1):  
+  
+        # Iterate through all prime factors of phi.  
+        # and check if we found a power with value 1  
+        flag = False
+        for it in s:  
+  
+            # Check if r^((phi)/primefactors) 
+            # mod n is 1 or not  
+            if (pow(r, phi // it, n) == 1):  
+  
+                flag = True
+                break
+              
+        # If there was no power with value 1.  
+        if (flag == False): 
+            return r  
+  
+    # If no primitive root found  
+    return -1
+
+def diffeHellman():
+	min = 100000
+	max = 999999
+	p = genPrime(min, max)
+	g = findPrimitive(p)
+	message =  f'{p},{g}'
+	
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/message, verbose=False)
+	a = random.randint(0, 10000)
+	A = (g**a) % p 
+	
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/A, verbose=False)
+	B = int(sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load)
+	s = (B**a) % p
+	
+	secret = hashlib.sha256(str(s).encode()).hexdigest()
+	x = slice(32)
+	secret = secret[x]
+	return secret
+
 
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
@@ -88,6 +200,11 @@ def Send_File(file):
 	time.sleep(.01)
 	print(f"Closing session with destination {DESTINATION_ADDR}.")
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3,seq=context.sequence_number), verbose=False)
+
+
+
+
+
 
 if mode == "file":
 	try:

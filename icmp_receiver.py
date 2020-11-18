@@ -4,6 +4,8 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from os import path
 import argparse
+import random
+import hashlib
 
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
@@ -87,6 +89,40 @@ class Session:
 		if str(value) == "0x2":
 			self.mode = "stream"
 
+		if str(value) == "0x9":
+			DH_Exchange(self)
+			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x2 or x[ICMP].id == 0x3)  , iface = INTERFACE, count=1)[0]
+			self.Set_Mode(self.current_packet.sprintf("%ICMP.id%"))
+
+	def DH_Exchange(self):
+		data = self.current_packet
+		diffeVars = message.split(",")
+		p = int(diffeVars[0])
+		g = int(diffeVars[1])
+
+		try:
+			isPrime(p)
+
+		except: 
+			print("Invalid Parameters Received!")
+
+		b = random.randint(10001, 20001)
+		B = (g**b) % p
+
+		send(IP(dst=self.sender_addr)/ICMP(id=9)/B, verbose=False)
+
+		A = int(sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load)
+		s = (A**b) % p
+
+		secret = hashlib.sha256(str(s).encode()).hexdigest()
+		x = slice(32)
+	
+		secret = secret[x]
+
+		self.session_key = secret.encode('utf-8')
+		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
+		
+
 	def Check_Sequence(self, received_sequence, expected_sequence):
 		if received_sequence == expected_sequence:
 			self.sequence_number = received_sequence
@@ -114,7 +150,7 @@ def Receive_Message(session):
 			if session.mode == "stream":
 				print(messages)
 		else:
-			print(f"Clossing session with sender {session.sender_addr}")
+			print(f"Closing session with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()
 	return Process_Message
@@ -131,4 +167,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 ), prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 or x[ICMP].id == 0x9 ), prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
