@@ -69,7 +69,7 @@ class Context:
 
 
 if Key_Type == "dynamic":
-	session_key = diffeHellman()
+	session_key = diffieHellman()
 
 else:
 	session_key = "99dbb171849cb81330244b664297225d"
@@ -155,7 +155,7 @@ def findPrimitive( n) :
     # If no primitive root found  
     return -1
 
-def diffeHellman():
+def diffieHellman():
 	min = 100000
 	max = 999999
 	p = genPrime(min, max)
