@@ -38,7 +38,7 @@ if args.Key_Type:
 
 #Referred to as context
 class Context:
-	def __init__(self, session_key):
+	def __init__(self, session_key, code):
 		self.session_key = session_key.encode('utf-8')
 		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
 		self.last_message = "none"
@@ -46,6 +46,7 @@ class Context:
 		self.id = "none"
 		self.file_length = "none"
 		self.sequence_number = 0x0
+		self.code = code
 
 	def Encrypt_Message(self, data):
 		data = pad(data,CHUNK_SIZE)
@@ -160,7 +161,9 @@ def diffieHellman():
 	a = random.randint(0, 10000)
 	A = (g**a) % p 
 	
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/str(A), verbose=True)
+
+
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=10)/str(A), verbose=True)
 	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , count=1)[0][Raw].load
 	data = data.decode('utf-8')
 	B = int(data)
@@ -172,12 +175,13 @@ def diffieHellman():
 	x = slice(32)
 	secret = secret[x]
 	time.sleep(1)
+
 	return secret
 
 
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id,seq=context.sequence_number)/message, verbose=False)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id,seq=context.sequence_number,code=context.code) /message, verbose=False)
 	print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
 	context.sequence_number += 0x1
 
@@ -204,12 +208,13 @@ def Send_File(file):
 
 if Key_Type == "dynamic":
 	session_key = diffieHellman()
+	code = 0x1
 
 else:
 	session_key = "99dbb171849cb81330244b664297225d"
+	code = 0x0
 
-
-context = Context(session_key)
+context = Context(session_key, code)
 
 
 if mode == "file":

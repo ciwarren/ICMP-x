@@ -2,7 +2,7 @@
 from scapy.all import * 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-from os import path
+from os import path, getcwd
 import argparse
 import random
 import hashlib
@@ -23,8 +23,12 @@ args = parser.parse_args()
  
 INTERFACE = None
 
+
 if args.Preferred_Path:
     PREFERRED_PATH = args.Preferred_Path
+
+else:
+	PREFERRED_PATH = getcwd()
 
 if args.Interface:
 	INTERFACE = args.Interface
@@ -126,7 +130,7 @@ class Session:
 		if str(value) == "0x9":
 			self.DH_Exchange()
 			print("here")
-			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x2 or x[ICMP].id == 0x3)  , iface = INTERFACE, count=1)[0]
+			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x1 or x[ICMP].id == 0x2)  , iface = INTERFACE, count=1)[0]
 			self.Set_Mode(self.current_packet.sprintf("%ICMP.id%"))
 
 	
@@ -176,4 +180,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 or x[ICMP].id == 0x9 ), prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 or x[ICMP].id == 0x9 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
