@@ -10,6 +10,7 @@ import time
 import random
 import hashlib
 from math import sqrt
+from tqdm import tqdm 
 
 CHUNK_SIZE = 256
 DATA_SIZE = CHUNK_SIZE - 1
@@ -54,10 +55,9 @@ class Context:
 
 	def Set_Mode(self,mode):
 		self.mode = mode
-		print(mode)
 		if self.mode == "file":
 			self.id = 1
-			Send_Message_Encrypted(f'{path.basename(filename)}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
+			Send_Message_Encrypted(f'{base_filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
 			self.id = 0
 
 
@@ -156,19 +156,19 @@ def DH_Exchange():
 	g = Find_Primitive(p)
 	message =  f'{p},{g}'
 	
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=8)/message, verbose=True)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=8)/message, verbose=False)
 	a = random.randint(0, 10000)
 	A = (g**a) % p 
 	
 	time.sleep(1)
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9, code=1)/str(A), verbose=True)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9, code=1)/str(A), verbose=False)
 	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , count=1)[0][Raw].load
 	data = data.decode('utf-8')
 	B = int(data)
 	s = (B**a) % p
 	
-	print(s)
+	#print(s)
 
 	secret = hashlib.sha256(str(s).encode()).hexdigest()
 	x = slice(32)
@@ -181,15 +181,15 @@ def DH_Exchange():
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id,seq=context.sequence_number,code=context.code) /message, verbose=False)
-	print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
+	#print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
 	context.sequence_number += 0x1
 
 
 
 def Send_File(file):
 	x_previous = 0 
-	print(len(file))
-	for x in range(DATA_SIZE,len(file),DATA_SIZE):
+	#print(len(file))
+	for x in tqdm (range(DATA_SIZE,len(file),DATA_SIZE), desc=f"Transfer {base_filename} to {DESTINATION_ADDR}   "):
 		file_segment = file[x_previous:x]
 		#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
@@ -206,6 +206,7 @@ def Send_File(file):
 
 
 if Key_Type == "dynamic":
+	print(f"Negotiating session key with {DESTINATION_ADDR}.")
 	session_key = DH_Exchange()
 	code = 1
 
@@ -219,14 +220,16 @@ context = Context(session_key, code)
 if mode == "file":
 	try:
 		file = open(filename, 'rb')
-
+		base_filename = path.basename(filename)
 	except:
 		print("file not found")
 	file = file.read()
 	context.file_length = len(file)
+	print(f"Starting session with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("file")
 	Send_File(file)
 
 if mode == "stream":
+	print(f"Starting session with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("stream")
-	print
+	print('STREAM')
