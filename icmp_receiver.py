@@ -33,7 +33,7 @@ else:
 if args.Interface:
 	INTERFACE = args.Interface
 
-def isPrime(n):
+def Is_Prime(n):
 	if n == 2 or n == 3: return True
 	if n < 2 or n%2 == 0: return False
 	if n < 9: return True
@@ -46,7 +46,7 @@ def isPrime(n):
 		f +=6
 	return True
 
-def interpretConfig(file):
+def Interpret_Config(file):
 	file = open(file, "r")
 	serverConfig = file.readlines()
 	file.close()
@@ -85,7 +85,7 @@ class Session:
 		g = int(diffeVars[1])
 
 		try:
-			isPrime(p)
+			Is_Prime(p)
 
 		except: 
 			print("Invalid Parameters Received!")
