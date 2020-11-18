@@ -90,6 +90,7 @@ class Session:
 		B = (g**b) % p
 
 		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
+		time.sleep(1)
 		send(IP(dst=self.sender_addr)/ICMP(id=9)/str(B), verbose=True)
 
 		
@@ -124,6 +125,7 @@ class Session:
 
 		if str(value) == "0x9":
 			self.DH_Exchange()
+			print("here")
 			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x2 or x[ICMP].id == 0x3)  , iface = INTERFACE, count=1)[0]
 			self.Set_Mode(self.current_packet.sprintf("%ICMP.id%"))
 

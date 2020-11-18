@@ -171,6 +171,7 @@ def diffieHellman():
 	secret = hashlib.sha256(str(s).encode()).hexdigest()
 	x = slice(32)
 	secret = secret[x]
+	time.sleep(1)
 	return secret
 
 
