@@ -70,7 +70,7 @@ class Context:
 
 
 
-def isPrime(n):
+def Is_Prime(n):
 	if n == 2 or n == 3: return True
 	if n < 2 or n%2 == 0: return False
 	if n < 9: return True
@@ -83,12 +83,12 @@ def isPrime(n):
 		f +=6
 	return True
 
-def genPrime(min, max):
-	primes = [i for i in range(min,max) if isPrime(i)]
+def Gen_Prime(min, max):
+	primes = [i for i in range(min,max) if Is_Prime(i)]
 	p = random.choice(primes)
 	return p
 
-def findPrimefactors(s, n) : 
+def Find_Prime_Factors(s, n) : 
   
     # Print the number of 2s that divide n  
     while (n % 2 == 0) : 
@@ -110,11 +110,11 @@ def findPrimefactors(s, n) :
     if (n > 2) : 
         s.add(n) 
 
-def findPrimitive( n) : 
+def Find_Primitive( n) : 
     s = set()  
 
     # Check if n is prime or not  
-    if (isPrime(n) == False):  
+    if (Is_Prime(n) == False):  
         return -1
   
     # Find value of Euler Totient function  
@@ -124,7 +124,7 @@ def findPrimitive( n) :
     phi = n - 1
   
     # Find prime factors of phi and store in a set  
-    findPrimefactors(s, phi)  
+    Find_Prime_Factors(s, phi)  
   
     # Check for every number from 2 to phi  
     for r in range(2, phi + 1):  
@@ -148,11 +148,11 @@ def findPrimitive( n) :
     # If no primitive root found  
     return -1
 
-def diffieHellman():
+def DH_Exchange():
 	min = 100000
 	max = 999999
-	p = genPrime(min, max)
-	g = findPrimitive(p)
+	p = Gen_Prime(min, max)
+	g = Find_Primitive(p)
 	message =  f'{p},{g}'
 	
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=8)/message, verbose=True)
@@ -205,7 +205,7 @@ def Send_File(file):
 
 
 if Key_Type == "dynamic":
-	session_key = diffieHellman()
+	session_key = DH_Exchange()
 	code = 1
 
 else:
