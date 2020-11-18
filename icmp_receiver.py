@@ -127,7 +127,7 @@ class Session:
 		if str(value) == "0x2":
 			self.mode = "stream"
 
-		if str(value) == "0x9":
+		if str(value) == "0x8":
 			print("here")
 			self.DH_Exchange()
 			print("here")

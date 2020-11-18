@@ -208,11 +208,11 @@ def Send_File(file):
 
 if Key_Type == "dynamic":
 	session_key = diffieHellman()
-	code = 0
+	code = 1
 
 else:
 	session_key = "99dbb171849cb81330244b664297225d"
-	code = 1
+	code = 0
 
 context = Context(session_key, code)
 
