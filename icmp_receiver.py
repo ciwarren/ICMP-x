@@ -128,6 +128,7 @@ class Session:
 			self.mode = "stream"
 
 		if str(value) == "0x9":
+			print("here")
 			self.DH_Exchange()
 			print("here")
 			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x1 or x[ICMP].id == 0x2)  , iface = INTERFACE, count=1)[0]
