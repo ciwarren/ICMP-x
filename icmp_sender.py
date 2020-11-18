@@ -8,6 +8,7 @@ import argparse
 import time
 import random
 import hashlib
+from math import sqrt
 
 
 HEADERLENGTH = 10

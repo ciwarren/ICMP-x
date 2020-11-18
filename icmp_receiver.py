@@ -6,6 +6,7 @@ from os import path
 import argparse
 import random
 import hashlib
+from math import sqrt
 
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
