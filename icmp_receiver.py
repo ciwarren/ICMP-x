@@ -89,9 +89,10 @@ class Session:
 		b = random.randint(10001, 20001)
 		B = (g**b) % p
 
+		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
 		send(IP(dst=self.sender_addr)/ICMP(id=9)/str(B), verbose=False)
 
-		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
+		
 		data = data.decode('utf-8')
 		A = int(data)
 		s = (A**b) % p
