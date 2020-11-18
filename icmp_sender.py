@@ -157,13 +157,13 @@ def diffieHellman():
 	g = findPrimitive(p)
 	message =  f'{p},{g}'
 	
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/message, verbose=True)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=8)/message, verbose=True)
 	a = random.randint(0, 10000)
 	A = (g**a) % p 
 	
 	time.sleep(1)
 
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=10)/str(A), verbose=True)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/str(A), verbose=True)
 	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x10 , count=1)[0][Raw].load
 	data = data.decode('utf-8')
 	B = int(data)
