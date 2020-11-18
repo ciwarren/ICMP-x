@@ -10,8 +10,6 @@ import random
 import hashlib
 from math import sqrt
 
-
-HEADERLENGTH = 10
 CHUNK_SIZE = 256
 DATA_SIZE = CHUNK_SIZE - 1
 
