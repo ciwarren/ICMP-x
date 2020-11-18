@@ -161,7 +161,9 @@ def diffieHellman():
 	A = (g**a) % p 
 	
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9)/A, verbose=False)
-	B = int(sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load)
+	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
+	data = data.decode('utf-8')
+	B = int(data)
 	s = (B**a) % p
 	
 	secret = hashlib.sha256(str(s).encode()).hexdigest()

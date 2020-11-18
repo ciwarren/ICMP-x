@@ -73,6 +73,37 @@ class Session:
 		self.capture = "none"
 		self.sequence_number = 0x0
 
+	def DH_Exchange(self):
+		data = self.current_packet[Raw].load
+		data = data.decode('utf-8')
+		diffeVars = data.split(",")
+		p = int(diffeVars[0])
+		g = int(diffeVars[1])
+
+		try:
+			isPrime(p)
+
+		except: 
+			print("Invalid Parameters Received!")
+
+		b = random.randint(10001, 20001)
+		B = (g**b) % p
+
+		send(IP(dst=self.sender_addr)/ICMP(id=9)/B, verbose=False)
+
+		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
+		data = data.decode('utf-8')
+		A = int(data)
+		s = (A**b) % p
+
+		secret = hashlib.sha256(str(s).encode()).hexdigest()
+		x = slice(32)
+	
+		secret = secret[x]
+
+		self.session_key = secret.encode('utf-8')
+		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
+
 	def Set_Mode(self, value):
 
 		data = self.current_packet[Raw].load
@@ -91,37 +122,11 @@ class Session:
 			self.mode = "stream"
 
 		if str(value) == "0x9":
-			DH_Exchange(self)
+			self.DH_Exchange()
 			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x2 or x[ICMP].id == 0x3)  , iface = INTERFACE, count=1)[0]
 			self.Set_Mode(self.current_packet.sprintf("%ICMP.id%"))
 
-	def DH_Exchange(self):
-		data = self.current_packet
-		diffeVars = message.split(",")
-		p = int(diffeVars[0])
-		g = int(diffeVars[1])
-
-		try:
-			isPrime(p)
-
-		except: 
-			print("Invalid Parameters Received!")
-
-		b = random.randint(10001, 20001)
-		B = (g**b) % p
-
-		send(IP(dst=self.sender_addr)/ICMP(id=9)/B, verbose=False)
-
-		A = int(sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load)
-		s = (A**b) % p
-
-		secret = hashlib.sha256(str(s).encode()).hexdigest()
-		x = slice(32)
 	
-		secret = secret[x]
-
-		self.session_key = secret.encode('utf-8')
-		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
 		
 
 	def Check_Sequence(self, received_sequence, expected_sequence):
