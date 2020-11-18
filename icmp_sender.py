@@ -54,7 +54,7 @@ class Context:
 
 	def Set_Mode(self,mode):
 		self.mode = mode
-
+		print(mode)
 		if self.mode == "file":
 			self.id = 1
 			Send_Message_Encrypted(f'{filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
