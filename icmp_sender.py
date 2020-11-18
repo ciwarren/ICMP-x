@@ -4,6 +4,7 @@ from scapy.all import *
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 from random import getrandbits
+from os import path
 import argparse
 import time
 import random
@@ -58,7 +59,7 @@ class Context:
 		print(mode)
 		if self.mode == "file":
 			self.id = 1
-			Send_Message_Encrypted(f'{filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
+			Send_Message_Encrypted(f'{path.basename(filename)}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
 			self.id = 0
 
 
