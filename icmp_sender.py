@@ -56,13 +56,13 @@ class Context:
 	def Set_Mode(self,mode):
 		self.mode = mode
 		if self.mode == "file":
-			self.id = 1
+			self.id = 2
 			Send_Message_Encrypted(f'{base_filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
 			self.id = 0
 
 
 		if self.mode == "stream":
-			self.id = 2
+			self.id = 3
 			Send_Message_Encrypted("Hello")
 			self.id = 0
 
@@ -201,7 +201,7 @@ def Send_File(file):
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
 	print(f"Closing session with destination {DESTINATION_ADDR}.")
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=3,seq=context.sequence_number), verbose=False)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number), verbose=False)
 
 
 
