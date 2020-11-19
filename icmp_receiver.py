@@ -7,6 +7,7 @@ import argparse
 import random
 import hashlib
 from math import sqrt
+from tqdm import tqdm
 
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
@@ -104,7 +105,7 @@ class Session:
 		B = (g**b) % p
 		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 and x[ICMP].code == self.session_id, iface = INTERFACE, count=1)[0][Raw].load
 		time.sleep(1)
-		send(IP(dst=self.sender_addr)/ICMP(id=9,code=self.session_id)/str(B), verbose=False)
+		send(IP(dst=self.sender_addr)/ICMP(id=9,type=8,code=self.session_id)/str(B), verbose=False)
 
 		
 		data = data.decode('utf-8')
@@ -131,7 +132,7 @@ class Session:
 			file_vars = file_vars.split(",")
 			#print(file_vars)
 			self.filename = file_vars[0]
-			self.message_total = file_vars[1]
+			self.message_total = int(file_vars[1])
 			print(f"Writing to {path.join(PREFERRED_PATH,file_vars[0])} in session {self.session_id}.")
 			self.file = open(path.join(PREFERRED_PATH,file_vars[0]),"wb")
 			self.mode = "file"
@@ -154,20 +155,23 @@ class Session:
 	def Check_Sequence(self, received_sequence, expected_sequence):
 		if received_sequence == expected_sequence:
 			self.sequence_number = received_sequence
+			return True
 		else:
 			print(f"Received sequence {received_sequence} from {self.sender_addr} but expected sequence {expected_sequence}")
+			return False
 
 	def Store_File(self, message):
 		self.file.write(bytes(message))
 		self.file.flush()
 
 	def Start_Session(self):
+		self.progress_bar = tqdm(total=self.message_total,desc=f"Transfer {self.filename} from {self.sender_addr} session {self.session_id}")
 		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x[ICMP].code == self.session_id, stop_filter=lambda x:x[ICMP].id == 0x4, prn= Receive_Message(self), iface = INTERFACE)
 		self.capture.start()
 
 def Send_Message_Encrypted(session, message, control_code):
 	message = session.Encrypt_Message(message)
-	send(IP(dst=session.sender_addr)/ICMP(id=control_code,code=session.session_id)/message, verbose=False)
+	send(IP(dst=session.sender_addr)/ICMP(type=8,id=control_code,code=session.session_id)/message, verbose=False)
 
 
 def Receive_Message(session):
@@ -175,13 +179,17 @@ def Receive_Message(session):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
 		if packet[ICMP].id != 4:
-			session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1)
-			message = Decrypt_Process(packet[Raw].load, session)
-			if session.mode == "file":
-				session.Store_File(bytes(message))
-			if session.mode == "stream":
-				print(messages)
+			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
+				message = Decrypt_Process(packet[Raw].load, session)
+				if session.mode == "file":
+					session.Store_File(bytes(message))
+					session.progress_bar.update()
+				if session.mode == "stream":
+					print(messages)
+			else:
+				send(IP(dst=session.sender_addr)/ICMP(type=8,id=5,code=session.session_id,seq=session.sequence_number+1),verbose=False)
 		else:
+			session.progress_bar.close()
 			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()

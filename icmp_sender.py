@@ -46,7 +46,10 @@ class Context:
 		self.mode = "none"
 		self.control_code = 0
 		self.file_length = "none"
-		self.sequence_number = 0x0
+		self.sequence_number = 0x1
+		self.sequence_target = 0
+		self.sequence_update = "none"
+		self.previous_sequence=0
 
 	def Encrypt_Message(self, data):
 		data = pad(data,CHUNK_SIZE)
@@ -168,6 +171,7 @@ def DH_Exchange():
 	A = (g**a) % p 
 	session_id = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9  and x[Raw].load == bytes(message.encode("utf-8")), count=1)[0][ICMP].code
 	print(f"Assigned session id {session_id}")
+	time.sleep(.5)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9, code=session_id)/str(A), verbose=False)
 	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 and x[ICMP].code == session_id, count=1)[0][Raw].load
 	data = data.decode('utf-8')
@@ -187,25 +191,42 @@ def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.control_code,seq=context.sequence_number,code=context.session_id) /message, verbose=False)
 	#print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
-	context.sequence_number += 0x1
 
-
-
+def Update_Sequence(context):
+	def Read_Sequence(packet):
+		context.sequence_update = packet[ICMP].seq
+		print(f"Server requested retransmit starting at sequence {context.sequence_update}")
+	return Read_Sequence
+	
 def Send_File(file):
-	x_previous = 0 
 	#print(len(file))
-	for x in tqdm (range(DATA_SIZE,len(file),DATA_SIZE), desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}"):
-		file_segment = file[x_previous:x]
-		#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
+	sequence_sniffer = AsyncSniffer(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x: x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].code == context.session_id and x[ICMP].id==0x5,prn=Update_Sequence(context))
+	sequence_sniffer.start()
+	print(context.sequence_target)
+	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
+	while context.sequence_number <= context.sequence_target:
+		#print(f"sequence {context.sequence_number} of {context.sequence_target} starts at {(context.sequence_number-1)*DATA_SIZE} to {context.sequence_number*DATA_SIZE}")
+		if context.sequence_number < context.sequence_target:	
+			file_segment = file[(context.sequence_number-1)*DATA_SIZE:context.sequence_number*DATA_SIZE]
+		else:
+			file_segment = file[(context.sequence_number-1)*DATA_SIZE:]
+		#print(f'{str(context.sequence_number)} of {str(context.sequence_target)} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
+		if context.sequence_update != "none":
+			context.sequence_number = context.sequence_update
+			time.sleep(1)
+			context.sequence_update = "none"
+		else:
+			context.sequence_number += 1
 		time.sleep(.001)
-		x_previous = x
-
-	file_segment = file[x_previous:]
-	#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
-	Send_Message_Encrypted(file_segment)
-	time.sleep(.01)
+		progress.update(context.sequence_number-context.previous_sequence)
+		context.previous_sequence = context.sequence_number
+		pass
+	time.sleep(3)
+	progress.update(context.sequence_target)
+	progress.close()
 	print(f"Closing session {context.session_id} with destination {DESTINATION_ADDR}.")
+	sequence_sniffer.stop()
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
 def Decrypt_Process(data, session):
@@ -234,6 +255,7 @@ if mode == "file":
 		print("file not found")
 	file = file.read()
 	context.file_length = len(file)
+	context.sequence_target = (context.file_length // DATA_SIZE) + 1
 	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("file")
 	Send_File(file)
