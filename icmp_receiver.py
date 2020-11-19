@@ -114,7 +114,7 @@ class Session:
 
 		data = self.current_packet[Raw].load
 
-		if str(value) == "0x1":
+		if str(value) == "0x2":
 			data = Decrypt_Process(data, self)
 			file_vars = data.decode('utf-8')
 			print(file_vars)
@@ -124,7 +124,7 @@ class Session:
 			self.file = open(path.join(PREFERRED_PATH,file_vars[0]),"wb")
 			self.mode = "file"
 
-		if str(value) == "0x2":
+		if str(value) == "0x3":
 			self.mode = "stream"
 
 		if str(value) == "0x8":
@@ -156,7 +156,7 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet.sprintf("%ICMP.id%") != "0x3":
+		if packet.sprintf("%ICMP.id%") != "0x4":
 			session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1)
 			message = Decrypt_Process(packet[Raw].load, session)
 			if session.mode == "file":
@@ -181,4 +181,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x1 or x[ICMP].id == 0x2 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
