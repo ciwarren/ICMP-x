@@ -11,6 +11,7 @@ from math import sqrt
 HEADER_LENGTH = 10
 CHUNK_SIZE = 256
 session_key = "99dbb171849cb81330244b664297225d"
+session_list=[]
 
 # Initialize parser
 parser = argparse.ArgumentParser()
@@ -64,7 +65,8 @@ def Interpret_Config(file):
 	return configDict
 
 class Session:
-	def __init__(self, session_key, ip_addr):
+	def __init__(self, session_id, session_key, ip_addr):
+		self.session_id = session_id
 		self.sender_addr = ip_addr
 		self.session_key = session_key.encode('utf-8')
 		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
@@ -76,10 +78,18 @@ class Session:
 		self.message_counter = 0
 		self.capture = "none"
 		self.sequence_number = 0x0
+		session_list.append({'id':self.session_id,'client':self.sender_addr})
+
+	def Encrypt_Message(self, data):
+		data = pad(data,CHUNK_SIZE)
+		payload = self.cipher.encrypt(data)
+		return payload
 
 	def DH_Exchange(self):
 		data = self.current_packet[Raw].load
 		data = data.decode('utf-8')
+		time.sleep(1)
+		send(IP(dst=self.sender_addr)/ICMP(id=9,type=8,code=self.session_id)/data, verbose=False)
 		diffeVars = data.split(",")
 		p = int(diffeVars[0])
 		g = int(diffeVars[1])
@@ -92,16 +102,14 @@ class Session:
 
 		b = random.randint(10001, 20001)
 		B = (g**b) % p
-
-		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , iface = INTERFACE, count=1)[0][Raw].load
+		data = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 and x[ICMP].code == self.session_id, iface = INTERFACE, count=1)[0][Raw].load
 		time.sleep(1)
-		send(IP(dst=self.sender_addr)/ICMP(id=9)/str(B), verbose=True)
+		send(IP(dst=self.sender_addr)/ICMP(id=9,code=self.session_id)/str(B), verbose=False)
 
 		
 		data = data.decode('utf-8')
 		A = int(data)
 		s = (A**b) % p
-		print(s)
 		secret = hashlib.sha256(str(s).encode()).hexdigest()
 		x = slice(32)
 	
@@ -111,31 +119,37 @@ class Session:
 		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
 
 	def Set_Mode(self, value):
-
 		data = self.current_packet[Raw].load
 
-		if str(value) == "0x2":
+		if value == 2:
 			data = Decrypt_Process(data, self)
+			if self.current_packet[ICMP].code == 0x0:
+				time.sleep(1)
+				print(f"Sending session id {self.session_id} to {self.sender_addr}.")
+				Send_Message_Encrypted(self, data, int(value))
 			file_vars = data.decode('utf-8')
-			print(file_vars)
-			file_vars = file_vars.split(":")
+			file_vars = file_vars.split(",")
+			#print(file_vars)
 			self.filename = file_vars[0]
 			self.message_total = file_vars[1]
+			print(f"Writing to {path.join(PREFERRED_PATH,file_vars[0])} in session {self.session_id}.")
 			self.file = open(path.join(PREFERRED_PATH,file_vars[0]),"wb")
 			self.mode = "file"
 
-		if str(value) == "0x3":
+		if value == 3:
 			self.mode = "stream"
+			if self.current_packet[ICMP].code == 0x0:
+				time.sleep(1)
+				print(f"Sending session id {self.session_id} to {self.sender_addr}.")
+				Send_Message_Encrypted(self, data, int(value))
 
-		if str(value) == "0x8":
-			print("here")
+
+		if value == 8:
 			self.DH_Exchange()
-			print("here")
-			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and (x[ICMP].id == 0x1 or x[ICMP].id == 0x2)  , iface = INTERFACE, count=1)[0]
-			self.Set_Mode(self.current_packet.sprintf("%ICMP.id%"))
+			print(f"Negotiated session {self.session_id} key.")
+			self.current_packet = sniff(filter=f"icmp and src host {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].code == self.session_id and (x[ICMP].id == 0x2 or x[ICMP].id == 0x3)  , iface = INTERFACE, count=1)[0]
+			self.Set_Mode(self.current_packet[ICMP].id)
 
-	
-		
 
 	def Check_Sequence(self, received_sequence, expected_sequence):
 		if received_sequence == expected_sequence:
@@ -148,15 +162,19 @@ class Session:
 		self.file.flush()
 
 	def Start_Session(self):
-		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8, stop_filter=lambda x:x[ICMP].id == 0x3, prn= Receive_Message(self), iface = INTERFACE)
-		print(f"Starting session sniff for sender {self.sender_addr}")
+		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x[ICMP].code == self.session_id, stop_filter=lambda x:x[ICMP].id == 0x4, prn= Receive_Message(self), iface = INTERFACE)
 		self.capture.start()
+
+def Send_Message_Encrypted(session, message, control_code):
+	message = session.Encrypt_Message(message)
+	send(IP(dst=session.sender_addr)/ICMP(id=control_code,code=session.session_id)/message, verbose=False)
+
 
 def Receive_Message(session):
 	def Process_Message(packet):
-		print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
+		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet.sprintf("%ICMP.id%") != "0x4":
+		if packet[ICMP].id != 4:
 			session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1)
 			message = Decrypt_Process(packet[Raw].load, session)
 			if session.mode == "file":
@@ -164,16 +182,21 @@ def Receive_Message(session):
 			if session.mode == "stream":
 				print(messages)
 		else:
-			print(f"Closing session with sender {session.sender_addr}")
+			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()
+			session_list.remove({'id':session.session_id,'client':session.sender_addr})
 	return Process_Message
 
 def Create_Session(packet, session_key):
-	session = Session(session_key, packet[IP].src)
+	session_id = random.randint(1,255)
+	while session_id in session_list:
+		session_id = random.randint(1,255)
+	session = Session(session_id, session_key, packet[IP].src)
 	session.current_packet = packet
-	print(f'New transmission from {session.sender_addr}')
-	session.Set_Mode(packet.sprintf("%ICMP.id%"))
+	print(f'Created session {session.session_id} with {session.sender_addr}')
+	print(f"Current sessions: {session_list}")
+	session.Set_Mode(packet[ICMP].id)
 	session.Start_Session()
 
 def Decrypt_Process(data, session):
@@ -181,4 +204,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp and src host not 192.168.1.135",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)

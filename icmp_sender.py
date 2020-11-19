@@ -38,15 +38,15 @@ if args.Key_Type:
 
 #Referred to as context
 class Context:
-	def __init__(self, session_key, code):
+	def __init__(self, session_id, session_key):
+		self.session_id = session_id
 		self.session_key = session_key.encode('utf-8')
 		self.cipher = AES.new(self.session_key, AES.MODE_ECB)
 		self.last_message = "none"
 		self.mode = "none"
-		self.id = "none"
+		self.control_code = 0
 		self.file_length = "none"
 		self.sequence_number = 0x0
-		self.code = code
 
 	def Encrypt_Message(self, data):
 		data = pad(data,CHUNK_SIZE)
@@ -56,16 +56,23 @@ class Context:
 	def Set_Mode(self,mode):
 		self.mode = mode
 		if self.mode == "file":
-			self.id = 2
-			Send_Message_Encrypted(f'{base_filename}:{(self.file_length // DATA_SIZE)}'.encode('utf-8'))
-			self.id = 0
-
+			self.control_code = 2
+			mode_message = f'{base_filename},{(self.file_length // DATA_SIZE)}'
 
 		if self.mode == "stream":
-			self.id = 3
-			Send_Message_Encrypted("Hello")
-			self.id = 0
+			self.control_code = 3
+			mode_message = "Hello"
+		
+		Send_Message_Encrypted(mode_message.encode("utf-8"))
 
+		if self.session_id == 0:
+			while self.session_id == 0:
+				print("Waiting for Session ID")
+				mode_response = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8, count=1)[0]
+				if Decrypt_Process(mode_response[Raw].load, self) == mode_message.encode("utf-8"):
+					self.session_id = mode_response[ICMP].code
+				
+			print(f"Assigned session id {self.session_id}.")
 		time.sleep(3)
 
 
@@ -159,11 +166,10 @@ def DH_Exchange():
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=8)/message, verbose=False)
 	a = random.randint(0, 10000)
 	A = (g**a) % p 
-	
-	time.sleep(1)
-
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9, code=1)/str(A), verbose=False)
-	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 , count=1)[0][Raw].load
+	session_id = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9  and x[Raw].load == bytes(message.encode("utf-8")), count=1)[0][ICMP].code
+	print(f"Assigned session id {session_id}")
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=9, code=session_id)/str(A), verbose=False)
+	data = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8 and x[ICMP].id == 0x9 and x[ICMP].code == session_id, count=1)[0][Raw].load
 	data = data.decode('utf-8')
 	B = int(data)
 	s = (B**a) % p
@@ -174,13 +180,12 @@ def DH_Exchange():
 	x = slice(32)
 	secret = secret[x]
 	time.sleep(1)
-
-	return secret
+	return [session_id,secret]
 
 
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.id,seq=context.sequence_number,code=context.code) /message, verbose=False)
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.control_code,seq=context.sequence_number,code=context.session_id) /message, verbose=False)
 	#print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
 	context.sequence_number += 0x1
 
@@ -189,7 +194,7 @@ def Send_Message_Encrypted(message):
 def Send_File(file):
 	x_previous = 0 
 	#print(len(file))
-	for x in tqdm (range(DATA_SIZE,len(file),DATA_SIZE), desc=f"Transfer {base_filename} to {DESTINATION_ADDR}   "):
+	for x in tqdm (range(DATA_SIZE,len(file),DATA_SIZE), desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}"):
 		file_segment = file[x_previous:x]
 		#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
@@ -200,21 +205,25 @@ def Send_File(file):
 	#print(f'{str(x)} of {str(len(file))} is: {file_segment}')
 	Send_Message_Encrypted(file_segment)
 	time.sleep(.01)
-	print(f"Closing session with destination {DESTINATION_ADDR}.")
-	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number), verbose=False)
+	print(f"Closing session {context.session_id} with destination {DESTINATION_ADDR}.")
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
-
+def Decrypt_Process(data, session):
+	data = session.cipher.decrypt(data)
+	message = unpad(data, CHUNK_SIZE)
+	return message
 
 if Key_Type == "dynamic":
-	print(f"Negotiating session key with {DESTINATION_ADDR}.")
-	session_key = DH_Exchange()
-	code = 1
+	print(f"Negotiating session details with {DESTINATION_ADDR}.")
+	session_details = DH_Exchange()
+	session_id = session_details[0]
+	session_key = session_details[1]
 
 else:
+	session_id = 0
 	session_key = "99dbb171849cb81330244b664297225d"
-	code = 0
 
-context = Context(session_key, code)
+context = Context(session_id,session_key)
 
 
 if mode == "file":
@@ -225,11 +234,11 @@ if mode == "file":
 		print("file not found")
 	file = file.read()
 	context.file_length = len(file)
-	print(f"Starting session with {DESTINATION_ADDR} in {mode} mode.")
+	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("file")
 	Send_File(file)
 
 if mode == "stream":
-	print(f"Starting session with {DESTINATION_ADDR} in {mode} mode.")
+	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("stream")
 	print('STREAM')
