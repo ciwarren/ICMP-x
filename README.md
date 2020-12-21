@@ -5,6 +5,7 @@ Handles multiple clients transmitting encrypted traffic with dynamic key assignm
 ARGS:
 ("-p", "--Preferred_Path", help = "Path to save output files to.")
 ("-i", "--Interface", help = "Interface to receieve on.")
+("-l", "--Local_Address", help = "The preferred interface's ip address.")
 
 ## ICMP_Sender
 ("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
@@ -13,6 +14,7 @@ ARGS:
 ("-k", "--Key_Type", help = "dynamic or static")
 
 ### This project is still in development and will have more features in the future. Feel free to make pull requests if you have any recommendations or questions.
+
 
 ### Creation of Ben Kangas and Charles Warren
 #### Licensed under the GNU GPLv3
