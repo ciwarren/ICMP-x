@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser()
 # Adding optional argument
 parser.add_argument("-p", "--Preferred_Path", help = "Path to save output files to.")
 parser.add_argument("-i", "--Interface", help = "Interface to receieve on.")
+parser.add_argument("-l", "--Local_Address", help = "The preferred interface's ip addres.")
 # Read arguments from command line
 args = parser.parse_args()
  
@@ -34,6 +35,11 @@ else:
 
 if args.Interface:
 	INTERFACE = args.Interface
+
+if args.Local_Address:
+	LOCAL_ADDRESS = args.Local_Address
+else:
+	LOCAL_ADDRESS = "255.255.255.255"
 
 def Is_Prime(n):
 	if n == 2 or n == 3: return True
@@ -212,4 +218,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp and src host not 192.168.1.135",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp and src host not {LOCAL_ADDRESS}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
