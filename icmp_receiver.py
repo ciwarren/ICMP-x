@@ -20,7 +20,7 @@ parser = argparse.ArgumentParser()
 # Adding optional argument
 parser.add_argument("-p", "--Preferred_Path", help = "Path to save output files to.")
 parser.add_argument("-i", "--Interface", help = "Interface to receieve on.")
-parser.add_argument("-l", "--Local_Address", help = "The preferred interface's ip addres.")
+parser.add_argument("-l", "--Local_Address", help = "The preferred interface's ip address.")
 # Read arguments from command line
 args = parser.parse_args()
  
