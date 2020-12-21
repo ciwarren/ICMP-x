@@ -14,5 +14,5 @@ ARGS:
 
 ### This project is still in development and will have more features in the future. Feel free to make pull requests if you have any recommendations or questions.
 
-### Creation of: Ben Kangas and Charles Warren
+### Creation of Ben Kangas and Charles Warren
 
