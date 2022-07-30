@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
  
 # Adding optional argument
 parser.add_argument("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
-parser.add_argument("-m", "--Mode", help = "Operation mode, 'file', 'stream', 'one-way-file'. Defaults to file.", default="file") 
+parser.add_argument("-m", "--Mode", help = "Operation mode, 'file', 'one-way-file'. Defaults to file.", default="file") 
 parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
 parser.add_argument("-k", "--Key_Type", help = "dynamic or static")
 # Read arguments from command line
@@ -62,17 +62,13 @@ class Context:
 			self.control_code = 2
 			mode_message = f'{base_filename},{(self.file_length // DATA_SIZE)}'
 
-		if self.mode == "stream":
-			self.control_code = 3
-			mode_message = "Hello"
-		
 		if self.mode == "one-way-file":
-			self.control_code = 4
+			self.control_code = 3
 			mode_message = f'{base_filename},{(self.file_length // DATA_SIZE)}'
 
 		Send_Message_Encrypted(mode_message.encode("utf-8"))
 
-		if self.session_id == 0 and self.control_code != 4:
+		if self.session_id == 0 and self.control_code == 2:
 			while self.session_id == 0:
 				print("Waiting for Session ID")
 				mode_response = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8, count=1)[0]
