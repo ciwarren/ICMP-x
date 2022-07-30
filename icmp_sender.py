@@ -70,7 +70,7 @@ class Context:
 			self.control_code = 4
 		Send_Message_Encrypted(mode_message.encode("utf-8"))
 
-		if self.session_id == 0 && self.control_code != 4:
+		if self.session_id == 0 or self.control_code != 4:
 			while self.session_id == 0:
 				print("Waiting for Session ID")
 				mode_response = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8, count=1)[0]
