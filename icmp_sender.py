@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
  
 # Adding optional argument
 parser.add_argument("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
-parser.add_argument("-m", "--Mode", help = "Operation mode, 'file' or 'stream'. Defaults to file.") 
+parser.add_argument("-m", "--Mode", help = "Operation mode, 'file', 'stream', 'one-way'. Defaults to file.", default="file") 
 parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
 parser.add_argument("-k", "--Key_Type", help = "dynamic or static")
 # Read arguments from command line
@@ -66,9 +66,11 @@ class Context:
 			self.control_code = 3
 			mode_message = "Hello"
 		
+		if self.mode == "one-way":
+			self.control_code = 4
 		Send_Message_Encrypted(mode_message.encode("utf-8"))
 
-		if self.session_id == 0:
+		if self.session_id == 0 && self.control_code != 4:
 			while self.session_id == 0:
 				print("Waiting for Session ID")
 				mode_response = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8, count=1)[0]
@@ -229,6 +231,9 @@ def Send_File(file):
 	sequence_sniffer.stop()
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
+def Send_One_Way(file):
+	
+
 def Decrypt_Process(data, session):
 	data = session.cipher.decrypt(data)
 	message = unpad(data, CHUNK_SIZE)
@@ -264,3 +269,8 @@ if mode == "stream":
 	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("stream")
 	print('STREAM')
+
+if mode == "one-way":
+	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
+	context.Set_Mode("one-way")
+

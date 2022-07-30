@@ -150,6 +150,8 @@ class Session:
 				print(f"Sending session id {self.session_id} to {self.sender_addr}.")
 				Send_Message_Encrypted(self, data, int(value))
 
+		if value == 4:
+			self.mode = "one-way"
 
 		if value == 8:
 			self.DH_Exchange()
@@ -218,4 +220,4 @@ def Decrypt_Process(data, session):
 	message = unpad(data, CHUNK_SIZE)
 	return message
 
-sniff(filter=f"icmp and src host not {LOCAL_ADDRESS}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
+sniff(filter=f"icmp and src host not {LOCAL_ADDRESS}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type == 0x8 and ( x[ICMP].id == 0x2 or x[ICMP].id == 0x3 or x[ICMP].id == 0x4 or x[ICMP].id == 0x8 ) and x[ICMP].code == 0x0 , prn= lambda x:Create_Session(x,session_key), iface= INTERFACE)
