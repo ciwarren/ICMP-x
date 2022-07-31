@@ -227,7 +227,9 @@ def Send_File(file):
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
 def Send_One_Way(file):
+	print(context.session_id)
 	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
+	print(context.sequence_target)
 	while context.sequence_number <= context.sequence_target:
 		if context.sequence_number < context.sequence_target:	
 			file_segment = file[(context.sequence_number-1)*DATA_SIZE:context.sequence_number*DATA_SIZE]

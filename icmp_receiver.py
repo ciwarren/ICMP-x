@@ -199,8 +199,12 @@ def Receive_Message(session):
 
 def Create_Session(packet, session_key):
 	session_id = random.randint(1,255)
-	while session_id in session_list:
-		session_id = random.randint(1,255)
+	if packet[IP].id == 3:
+		session_id = 0
+	else:
+		while session_id in session_list:
+			session_id = random.randint(1,255)
+			
 	session = Session(session_id, session_key, packet[IP].src)
 	session.current_packet = packet
 	print(f'Created session {session.session_id} with {session.sender_addr}')
