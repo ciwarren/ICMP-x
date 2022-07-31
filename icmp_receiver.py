@@ -182,7 +182,12 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet[ICMP].id != 4:
+		if packet[ICMP].id == 3:
+			message = Decrypt_Process(packet[Raw].load, session)
+			#session.progress_bar.update()
+			session.Store_File(bytes(message))
+
+		elif: packet[ICMP].id != 4:
 			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
 				message = Decrypt_Process(packet[Raw].load, session)
 				#session.progress_bar.update()
@@ -204,7 +209,7 @@ def Create_Session(packet, session_key):
 	else:
 		while session_id in session_list:
 			session_id = random.randint(1,255)
-			
+
 	session = Session(session_id, session_key, packet[IP].src)
 	session.current_packet = packet
 	print(f'Created session {session.session_id} with {session.sender_addr}')
