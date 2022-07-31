@@ -190,7 +190,7 @@ def DH_Exchange():
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.control_code,seq=context.sequence_number,code=context.session_id) /message, verbose=False)
-	#print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
+	print(f"Sent packet with id {context.session_id} and sequence {context.sequence_number}, and control_code {context.control_code}")
 
 def Update_Sequence(context):
 	def Read_Sequence(packet):
@@ -228,6 +228,7 @@ def Send_File(file):
 
 def Send_One_Way(file):
 	print(context.session_id)
+	context.control_code = 0
 	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
 	print(context.sequence_target)
 	while context.sequence_number <= context.sequence_target:
