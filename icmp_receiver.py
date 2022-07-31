@@ -144,7 +144,6 @@ class Session:
 			self.mode = "file"
 
 		if value == 3:
-			if value == 3:
 			self.mode = "one-way-file"
 			if self.current_packet[ICMP].code == 0x0:
 				time.sleep(1)
