@@ -204,7 +204,7 @@ def Receive_Message(session):
 
 def Create_Session(packet, session_key):
 	session_id = random.randint(1,255)
-	if packet[IP].id == 3:
+	if packet[ICMP].id == 3:
 		session_id = 0
 	else:
 		while session_id in session_list:
