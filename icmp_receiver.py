@@ -144,6 +144,14 @@ class Session:
 			self.mode = "file"
 
 		if value == 3:
+			data = Decrypt_Process(data, self)
+			file_vars = data.decode('utf-8')
+			file_vars = file_vars.split(",")
+			#print(file_vars)
+			self.filename = file_vars[0]
+			self.message_total = int(file_vars[1])
+			print(f"Writing to {path.join(PREFERRED_PATH,file_vars[0])} in session {self.session_id}.")
+			self.file = open(path.join(PREFERRED_PATH,file_vars[0]),"wb")
 			self.mode = "one-way-file"
 			if self.current_packet[ICMP].code == 0x0:
 				time.sleep(1)
