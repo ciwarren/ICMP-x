@@ -187,7 +187,7 @@ def Receive_Message(session):
 			#session.progress_bar.update()
 			session.Store_File(bytes(message))
 
-		elif: packet[ICMP].id != 4:
+		elif packet[ICMP].id != 4:
 			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
 				message = Decrypt_Process(packet[Raw].load, session)
 				#session.progress_bar.update()
