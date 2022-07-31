@@ -182,7 +182,7 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet[ICMP].id == 3:
+		if session.mode == "one-way-file":
 			message = Decrypt_Process(packet[Raw].load, session)
 			#session.progress_bar.update()
 			session.Store_File(bytes(message))
