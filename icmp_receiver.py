@@ -169,7 +169,7 @@ class Session:
 		self.file.flush()
 
 	def Start_Session(self):
-		self.progress_bar = tqdm(total=self.message_total,desc=f"Transfer {self.filename} from {self.sender_addr} session {self.session_id}")
+		#self.progress_bar = tqdm(total=self.message_total,desc=f"Transfer {self.filename} from {self.sender_addr} session {self.session_id}")
 		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x[ICMP].code == self.session_id, stop_filter=lambda x:x[ICMP].id == 0x4, prn= Receive_Message(self), iface = INTERFACE)
 		self.capture.start()
 
@@ -185,15 +185,12 @@ def Receive_Message(session):
 		if packet[ICMP].id != 4:
 			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
 				message = Decrypt_Process(packet[Raw].load, session)
-				if session.mode == "file":
-					session.Store_File(bytes(message))
-					session.progress_bar.update()
-				if session.mode == "stream":
-					print(messages)
+				#session.progress_bar.update()
+				session.Store_File(bytes(message))
 			else:
 				send(IP(dst=session.sender_addr)/ICMP(type=8,id=5,code=session.session_id,seq=session.sequence_number+1),verbose=False)
 		else:
-			session.progress_bar.close()
+			#session.progress_bar.close()
 			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()
