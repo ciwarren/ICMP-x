@@ -178,8 +178,6 @@ def DH_Exchange():
 	B = int(data)
 	s = (B**a) % p
 	
-	#print(s)
-
 	secret = hashlib.sha256(str(s).encode()).hexdigest()
 	x = slice(32)
 	secret = secret[x]
@@ -190,7 +188,6 @@ def DH_Exchange():
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.control_code,seq=context.sequence_number,code=context.session_id) /message, verbose=False)
-	print(f"Sent packet with id {context.session_id} and sequence {context.sequence_number}, and control_code {context.control_code}")
 
 def Update_Sequence(context):
 	def Read_Sequence(packet):
@@ -201,7 +198,6 @@ def Update_Sequence(context):
 def Send_File(file):
 	sequence_sniffer = AsyncSniffer(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x: x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].code == context.session_id and x[ICMP].id==0x5,prn=Update_Sequence(context))
 	sequence_sniffer.start()
-	print(context.sequence_target)
 	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
 	while context.sequence_number <= context.sequence_target:
 		if context.sequence_number < context.sequence_target:	
@@ -227,10 +223,8 @@ def Send_File(file):
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
 def Send_One_Way(file):
-	print(context.session_id)
 	context.control_code = 0
 	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
-	print(context.sequence_target)
 	while context.sequence_number <= context.sequence_target:
 		if context.sequence_number < context.sequence_target:	
 			file_segment = file[(context.sequence_number-1)*DATA_SIZE:context.sequence_number*DATA_SIZE]
