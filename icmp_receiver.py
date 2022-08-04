@@ -190,24 +190,23 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if session.mode == "one-way-file":
+		if packet[ICMP].id != 4: :
+			#session.progress_bar.close()
+			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
+			if session.mode == "file":
+				session.file.close()
+			session_list.remove({'id':session.session_id,'client':session.sender_addr})
+		elif session.mode == "one-way-file":
 			message = Decrypt_Process(packet[Raw].load, session)
 			#session.progress_bar.update()
 			session.Store_File(bytes(message))
-
-		elif packet[ICMP].id != 4:
+		else:
 			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
 				message = Decrypt_Process(packet[Raw].load, session)
 				#session.progress_bar.update()
 				session.Store_File(bytes(message))
 			else:
 				send(IP(dst=session.sender_addr)/ICMP(type=8,id=5,code=session.session_id,seq=session.sequence_number+1),verbose=False)
-		else:
-			#session.progress_bar.close()
-			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
-			if session.mode == "file":
-				session.file.close()
-			session_list.remove({'id':session.session_id,'client':session.sender_addr})
 	return Process_Message
 
 def Create_Session(packet, session_key):
