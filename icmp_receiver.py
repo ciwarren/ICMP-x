@@ -190,7 +190,7 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet[ICMP].id != 4: :
+		if packet[ICMP].id != 4:
 			#session.progress_bar.close()
 			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
 			if session.mode == "file":
