@@ -232,7 +232,7 @@ def Send_One_Way(file):
 			file_segment = file[(context.sequence_number-1)*DATA_SIZE:]
 		Send_Message_Encrypted(file_segment)
 		context.sequence_number += 1
-		time.sleep(.001)
+		time.sleep(.050)
 		progress.update(context.sequence_number-context.previous_sequence)
 		context.previous_sequence = context.sequence_number
 
