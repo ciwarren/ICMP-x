@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
  
 # Adding optional argument
 parser.add_argument("-p", "--Peer", help = "IP address of receiving host -ex 192.168.1.1")
-parser.add_argument("-m", "--Mode", help = "Operation mode, 'file' or 'stream'. Defaults to file.") 
+parser.add_argument("-m", "--Mode", help = "Operation mode, 'file', 'one-way-file'. Defaults to file.", default="file") 
 parser.add_argument("-f", "--Filename", help = "File to transfer. Used with 'file' mode.")
 parser.add_argument("-k", "--Key_Type", help = "dynamic or static")
 # Read arguments from command line
@@ -62,13 +62,13 @@ class Context:
 			self.control_code = 2
 			mode_message = f'{base_filename},{(self.file_length // DATA_SIZE)}'
 
-		if self.mode == "stream":
+		if self.mode == "one-way-file":
 			self.control_code = 3
-			mode_message = "Hello"
-		
+			mode_message = f'{base_filename},{(self.file_length // DATA_SIZE)}'
+
 		Send_Message_Encrypted(mode_message.encode("utf-8"))
 
-		if self.session_id == 0:
+		if self.session_id == 0 and self.control_code == 2:
 			while self.session_id == 0:
 				print("Waiting for Session ID")
 				mode_response = sniff(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x.haslayer(Raw) and x[ICMP].type == 0x8, count=1)[0]
@@ -178,8 +178,6 @@ def DH_Exchange():
 	B = int(data)
 	s = (B**a) % p
 	
-	#print(s)
-
 	secret = hashlib.sha256(str(s).encode()).hexdigest()
 	x = slice(32)
 	secret = secret[x]
@@ -190,7 +188,6 @@ def DH_Exchange():
 def Send_Message_Encrypted(message):
 	message = context.Encrypt_Message(message)
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=context.control_code,seq=context.sequence_number,code=context.session_id) /message, verbose=False)
-	#print(f"Sent packet with id {context.id} and sequence {context.sequence_number}")
 
 def Update_Sequence(context):
 	def Read_Sequence(packet):
@@ -199,18 +196,14 @@ def Update_Sequence(context):
 	return Read_Sequence
 	
 def Send_File(file):
-	#print(len(file))
 	sequence_sniffer = AsyncSniffer(filter=f"icmp and src host {DESTINATION_ADDR}",lfilter=lambda x: x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].code == context.session_id and x[ICMP].id==0x5,prn=Update_Sequence(context))
 	sequence_sniffer.start()
-	print(context.sequence_target)
 	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
 	while context.sequence_number <= context.sequence_target:
-		#print(f"sequence {context.sequence_number} of {context.sequence_target} starts at {(context.sequence_number-1)*DATA_SIZE} to {context.sequence_number*DATA_SIZE}")
 		if context.sequence_number < context.sequence_target:	
 			file_segment = file[(context.sequence_number-1)*DATA_SIZE:context.sequence_number*DATA_SIZE]
 		else:
 			file_segment = file[(context.sequence_number-1)*DATA_SIZE:]
-		#print(f'{str(context.sequence_number)} of {str(context.sequence_target)} is: {file_segment}')
 		Send_Message_Encrypted(file_segment)
 		if context.sequence_update != "none":
 			context.sequence_number = context.sequence_update
@@ -227,6 +220,26 @@ def Send_File(file):
 	progress.close()
 	print(f"Closing session {context.session_id} with destination {DESTINATION_ADDR}.")
 	sequence_sniffer.stop()
+	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
+
+def Send_One_Way(file):
+	context.control_code = 0
+	progress = tqdm(total=context.sequence_target, desc=f"Transfer {base_filename} to {DESTINATION_ADDR} session {context.session_id}")
+	while context.sequence_number <= context.sequence_target:
+		if context.sequence_number < context.sequence_target:	
+			file_segment = file[(context.sequence_number-1)*DATA_SIZE:context.sequence_number*DATA_SIZE]
+		else:
+			file_segment = file[(context.sequence_number-1)*DATA_SIZE:]
+		Send_Message_Encrypted(file_segment)
+		context.sequence_number += 1
+		time.sleep(.050)
+		progress.update(context.sequence_number-context.previous_sequence)
+		context.previous_sequence = context.sequence_number
+
+	time.sleep(3)
+	progress.update(context.sequence_target)
+	progress.close()
+	print(f"Closing session {context.session_id} with destination {DESTINATION_ADDR}.")
 	send(IP(dst=DESTINATION_ADDR)/ICMP(id=4,seq=context.sequence_number,code=context.session_id), verbose=False)
 
 def Decrypt_Process(data, session):
@@ -264,3 +277,18 @@ if mode == "stream":
 	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
 	context.Set_Mode("stream")
 	print('STREAM')
+
+if mode == "one-way-file":
+	try:
+		file = open(filename, 'rb')
+		base_filename = path.basename(filename)
+	except:
+		print("file not found")
+	
+	file = file.read()
+	context.file_length = len(file)
+	context.sequence_target = (context.file_length // DATA_SIZE) + 1
+	print(f"Starting session {context.session_id} with {DESTINATION_ADDR} in {mode} mode.")
+	context.Set_Mode("one-way-file")
+	Send_One_Way(file)
+
