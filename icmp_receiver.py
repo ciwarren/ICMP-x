@@ -144,11 +144,17 @@ class Session:
 			self.mode = "file"
 
 		if value == 3:
-			self.mode = "stream"
+			data = Decrypt_Process(data, self)
+			file_vars = data.decode('utf-8')
+			file_vars = file_vars.split(",")
+			#print(file_vars)
+			self.filename = file_vars[0]
+			self.message_total = int(file_vars[1])
+			print(f"Writing to {path.join(PREFERRED_PATH,file_vars[0])} in session {self.session_id}.")
+			self.file = open(path.join(PREFERRED_PATH,file_vars[0]),"wb")
+			self.mode = "one-way-file"
 			if self.current_packet[ICMP].code == 0x0:
 				time.sleep(1)
-				print(f"Sending session id {self.session_id} to {self.sender_addr}.")
-				Send_Message_Encrypted(self, data, int(value))
 
 
 		if value == 8:
@@ -171,7 +177,7 @@ class Session:
 		self.file.flush()
 
 	def Start_Session(self):
-		self.progress_bar = tqdm(total=self.message_total,desc=f"Transfer {self.filename} from {self.sender_addr} session {self.session_id}")
+		#self.progress_bar = tqdm(total=self.message_total,desc=f"Transfer {self.filename} from {self.sender_addr} session {self.session_id}")
 		self.capture = AsyncSniffer(filter=f"ip src {self.sender_addr}",lfilter=lambda x:x.haslayer(IP) and x.haslayer(ICMP) and x[ICMP].type==0x8 and x[ICMP].code == self.session_id, stop_filter=lambda x:x[ICMP].id == 0x4, prn= Receive_Message(self), iface = INTERFACE)
 		self.capture.start()
 
@@ -184,28 +190,33 @@ def Receive_Message(session):
 	def Process_Message(packet):
 		#print(f"{session.sender_addr}:{session.filename}:{packet[ICMP].seq}")
 		session.current_packet = packet
-		if packet[ICMP].id != 4:
-			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
-				message = Decrypt_Process(packet[Raw].load, session)
-				if session.mode == "file":
-					session.Store_File(bytes(message))
-					session.progress_bar.update()
-				if session.mode == "stream":
-					print(messages)
-			else:
-				send(IP(dst=session.sender_addr)/ICMP(type=8,id=5,code=session.session_id,seq=session.sequence_number+1),verbose=False)
-		else:
-			session.progress_bar.close()
+		if packet[ICMP].id == 4:
+			#session.progress_bar.close()
 			print(f"Closing session {session.session_id} with sender {session.sender_addr}")
 			if session.mode == "file":
 				session.file.close()
 			session_list.remove({'id':session.session_id,'client':session.sender_addr})
+		elif session.mode == "one-way-file":
+			message = Decrypt_Process(packet[Raw].load, session)
+			#session.progress_bar.update()
+			session.Store_File(bytes(message))
+		else:
+			if session.Check_Sequence(packet[ICMP].seq, session.sequence_number+1):
+				message = Decrypt_Process(packet[Raw].load, session)
+				#session.progress_bar.update()
+				session.Store_File(bytes(message))
+			else:
+				send(IP(dst=session.sender_addr)/ICMP(type=8,id=5,code=session.session_id,seq=session.sequence_number+1),verbose=False)
 	return Process_Message
 
 def Create_Session(packet, session_key):
 	session_id = random.randint(1,255)
-	while session_id in session_list:
-		session_id = random.randint(1,255)
+	if packet[ICMP].id == 3:
+		session_id = 0
+	else:
+		while session_id in session_list:
+			session_id = random.randint(1,255)
+
 	session = Session(session_id, session_key, packet[IP].src)
 	session.current_packet = packet
 	print(f'Created session {session.session_id} with {session.sender_addr}')
